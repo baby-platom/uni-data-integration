@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Data Integration project"
 readme = "README.md"
 requires-python = "==3.12.7"
-dependencies = []
+dependencies = [
+    "pyspark>=4.0.0",
+]
 
 [dependency-groups]
 dev = [
