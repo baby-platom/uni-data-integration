@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 from pyspark.sql import DataFrame, SparkSession
@@ -22,7 +21,7 @@ from pyspark.sql.types import (
     StructType,
 )
 
-from app.constants import APP_NAME, INPUT_DIR, OUTPUT_DIR
+from app.constants import INPUT_DIR
 
 EXPECTED_YEAR = 2015
 MAX_QUANTITY = 100
@@ -144,10 +143,9 @@ def preprocess_pizzas(df: DataFrame) -> DataFrame:
     )
 
 
-def main() -> None:
-    logging.basicConfig(level=logging.INFO)
-    spark = SparkSession.builder.appName(APP_NAME).getOrCreate()
-
+def load_and_preprocess(
+    spark: SparkSession,
+) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
     order_details_schema = StructType(
         [
             StructField("order_details_id", IntegerType(), nullable=False),
@@ -188,18 +186,9 @@ def main() -> None:
     pt_df = load_csv(spark, INPUT_DIR / "pizza_types.csv", pizza_types_schema)
     pizzas_df = load_csv(spark, INPUT_DIR / "pizzas.csv", pizzas_schema)
 
-    od_clean = preprocess_order_details(od_df)
+    order_details_clean = preprocess_order_details(od_df)
     orders_clean = preprocess_orders(orders_df)
-    pt_clean = preprocess_pizza_types(pt_df)
+    pizza_types_clean = preprocess_pizza_types(pt_df)
     pizzas_clean = preprocess_pizzas(pizzas_df)
 
-    od_clean.write.mode("overwrite").parquet(str(OUTPUT_DIR / "order_details"))
-    orders_clean.write.mode("overwrite").parquet(str(OUTPUT_DIR / "orders"))
-    pt_clean.write.mode("overwrite").parquet(str(OUTPUT_DIR / "pizza_types"))
-    pizzas_clean.write.mode("overwrite").parquet(str(OUTPUT_DIR / "pizzas"))
-
-    spark.stop()
-
-
-if __name__ == "__main__":
-    main()
+    return order_details_clean, orders_clean, pizza_types_clean, pizzas_clean
