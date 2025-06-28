@@ -1,10 +1,9 @@
-from pathlib import Path
-
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 from pyspark.sql.functions import (
     col,
     concat_ws,
     lit,
+    lower,
     regexp_replace,
     split,
     to_date,
@@ -13,54 +12,31 @@ from pyspark.sql.functions import (
     when,
     year,
 )
-from pyspark.sql.types import (
-    DoubleType,
-    IntegerType,
-    StringType,
-    StructField,
-    StructType,
-)
-
-from app.constants import INPUT_DIR
+from pyspark.sql.types import DoubleType
 
 EXPECTED_YEAR = 2015
 MAX_QUANTITY = 100
-ALLOWED_SIZES = ["S", "M", "L", "XL"]
+ALLOWED_SIZES = ["s", "m", "l", "xl"]
 MAX_PRICE = 100.0
-
-
-def _load_csv(
-    spark: SparkSession,
-    path: Path,
-    schema: StructType,
-    *,
-    header: bool = True,
-    infer_schema: bool = False,
-) -> DataFrame:
-    return spark.read.csv(
-        str(path),
-        header=header,
-        schema=schema,
-        inferSchema=infer_schema,
-    )
 
 
 def _preprocess_order_details(df: DataFrame) -> DataFrame:
     """Clean and preprocess order_details DataFrame.
 
     - Drop duplicates
-    - Remove rows with nulls, quantity < 1, quantity > `MAX_QUANTITY`
+    - Remove rows with nulls
+    - Trim whitespace
+    - Filter quantity < 1, quantity > `MAX_QUANTITY`
     """
-    df = df.dropDuplicates()
+    columns = ["order_details_id", "order_id", "pizza_id", "quantity"]
 
-    return df.filter(
-        col("order_details_id").isNotNull()
-        & col("order_id").isNotNull()
-        & col("pizza_id").isNotNull()
-        & col("quantity").isNotNull()
-        & (col("quantity") >= 1)
-        & (col("quantity") <= MAX_QUANTITY)
-    )
+    df = df.dropDuplicates()
+    df = df.dropna(subset=columns)
+
+    for column in columns:
+        df = df.withColumn(column, lower(trim(col(column))))
+
+    return df.filter((col("quantity") >= 1) & (col("quantity") <= MAX_QUANTITY))
 
 
 def _preprocess_orders(df: DataFrame) -> DataFrame:
@@ -68,11 +44,17 @@ def _preprocess_orders(df: DataFrame) -> DataFrame:
 
     - Drop duplicates
     - Remove rows with nulls
+    - Trim whitespace
     - Filter invalid dates/times and year != `EXPECTED_YEAR`
     - Combine date and time into timestamp
     """
+    columns = ["order_id", "date", "time"]
+
     df = df.dropDuplicates()
-    df = df.dropna(subset=["order_id", "date", "time"])
+    df = df.dropna(subset=columns)
+
+    for column in columns:
+        df = df.withColumn(column, lower(trim(col(column))))
 
     df = df.withColumn("order_date", to_date(col("date"), "yyyy-MM-dd"))
     df = df.withColumn("order_time", to_timestamp(col("time"), "HH:mm:ss"))
@@ -102,7 +84,7 @@ def _preprocess_pizza_types(df: DataFrame) -> DataFrame:
     df = df.dropna(subset=columns)
 
     for column in columns:
-        df = df.withColumn(column, trim(col(column)))
+        df = df.withColumn(column, lower(trim(col(column))))
 
     df = df.withColumn("ingredients", regexp_replace(col("ingredients"), '^"|"$', ""))
 
@@ -126,7 +108,7 @@ def _preprocess_pizzas(df: DataFrame) -> DataFrame:
     df = df.dropna(subset=columns)
 
     for column in columns:
-        df = df.withColumn(column, trim(col(column)))
+        df = df.withColumn(column, lower(trim(col(column))))
 
     df = df.withColumn("size", trim(col("size")))
     df = df.filter(col("size").isin(ALLOWED_SIZES))
@@ -143,52 +125,15 @@ def _preprocess_pizzas(df: DataFrame) -> DataFrame:
     )
 
 
-def load_and_preprocess(
-    spark: SparkSession,
+def preprocess(
+    order_details_df: DataFrame,
+    orders_df: DataFrame,
+    pizza_types_df: DataFrame,
+    pizzas_df: DataFrame,
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
-    order_details_schema = StructType(
-        [
-            StructField("order_details_id", IntegerType(), nullable=False),
-            StructField("order_id", IntegerType(), nullable=False),
-            StructField("pizza_id", StringType(), nullable=False),
-            StructField("quantity", IntegerType(), nullable=False),
-        ]
-    )
-
-    orders_schema = StructType(
-        [
-            StructField("order_id", IntegerType(), nullable=False),
-            StructField("date", StringType(), nullable=False),
-            StructField("time", StringType(), nullable=False),
-        ]
-    )
-
-    pizza_types_schema = StructType(
-        [
-            StructField("pizza_type_id", StringType(), nullable=False),
-            StructField("name", StringType(), nullable=False),
-            StructField("category", StringType(), nullable=False),
-            StructField("ingredients", StringType(), nullable=False),
-        ]
-    )
-
-    pizzas_schema = StructType(
-        [
-            StructField("pizza_id", StringType(), nullable=False),
-            StructField("pizza_type_id", StringType(), nullable=False),
-            StructField("size", StringType(), nullable=False),
-            StructField("price", StringType(), nullable=False),
-        ]
-    )
-
-    od_df = _load_csv(spark, INPUT_DIR / "order_details.csv", order_details_schema)
-    orders_df = _load_csv(spark, INPUT_DIR / "orders.csv", orders_schema)
-    pt_df = _load_csv(spark, INPUT_DIR / "pizza_types.csv", pizza_types_schema)
-    pizzas_df = _load_csv(spark, INPUT_DIR / "pizzas.csv", pizzas_schema)
-
-    order_details_clean = _preprocess_order_details(od_df)
+    order_details_clean = _preprocess_order_details(order_details_df)
     orders_clean = _preprocess_orders(orders_df)
-    pizza_types_clean = _preprocess_pizza_types(pt_df)
+    pizza_types_clean = _preprocess_pizza_types(pizza_types_df)
     pizzas_clean = _preprocess_pizzas(pizzas_df)
 
     return order_details_clean, orders_clean, pizza_types_clean, pizzas_clean

@@ -10,8 +10,8 @@ def _pizzas_sold_distribution(spark: SparkSession, view_name: str) -> DataFrame:
     query = f"""
         SELECT
             regexp_replace(
-                regexp_replace(name, '^The ', ''),
-                ' Pizza$', ''
+                regexp_replace(name, '^the ', ''),
+                ' pizza$', ''
             ) AS clean_name,
             SUM(quantity) AS total_sold
         FROM {view_name}
