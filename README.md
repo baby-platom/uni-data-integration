@@ -36,7 +36,13 @@ Optionally:
 - Use [ruff](https://docs.astral.sh/ruff/) as a linter and code formatter
 
 ## Usage
-Run the main script
+1. Run the ETL script
 ```sh
-python -m app.main
+python -m app.run_etl
+```
+The result dataset will be written in the Parquet format into the `data/processed/`
+
+2. Run the analysis script
+```sh
+python -m app.run_analysis
 ```

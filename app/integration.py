@@ -1,7 +1,5 @@
-from pathlib import Path
-
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, month, year
+from pyspark.sql.functions import col
 
 
 def integrate_and_transform(
@@ -31,20 +29,4 @@ def integrate_and_transform(
         "price",
         "quantity",
         "total_price",
-    )
-
-
-def write_to_parquet(
-    df: DataFrame,
-    output_path: Path,
-) -> None:
-    partition_cols = ["year", "month"]
-    df_with_parts = df.withColumn("year", year(col("order_timestamp"))).withColumn(
-        "month", month(col("order_timestamp"))
-    )
-
-    (
-        df_with_parts.write.mode("overwrite")
-        .partitionBy(*partition_cols)
-        .parquet(str(output_path))
     )
