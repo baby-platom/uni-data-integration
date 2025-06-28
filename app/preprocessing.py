@@ -29,7 +29,7 @@ ALLOWED_SIZES = ["S", "M", "L", "XL"]
 MAX_PRICE = 100.0
 
 
-def load_csv(
+def _load_csv(
     spark: SparkSession,
     path: Path,
     schema: StructType,
@@ -45,7 +45,7 @@ def load_csv(
     )
 
 
-def preprocess_order_details(df: DataFrame) -> DataFrame:
+def _preprocess_order_details(df: DataFrame) -> DataFrame:
     """Clean and preprocess order_details DataFrame.
 
     - Drop duplicates
@@ -63,7 +63,7 @@ def preprocess_order_details(df: DataFrame) -> DataFrame:
     )
 
 
-def preprocess_orders(df: DataFrame) -> DataFrame:
+def _preprocess_orders(df: DataFrame) -> DataFrame:
     """Clean and preprocess orders DataFrame.
 
     - Drop duplicates
@@ -88,7 +88,7 @@ def preprocess_orders(df: DataFrame) -> DataFrame:
     ).drop("date", "time")
 
 
-def preprocess_pizza_types(df: DataFrame) -> DataFrame:
+def _preprocess_pizza_types(df: DataFrame) -> DataFrame:
     """Clean and preprocess pizza_types DataFrame.
 
     - Drop duplicates
@@ -111,7 +111,7 @@ def preprocess_pizza_types(df: DataFrame) -> DataFrame:
     )
 
 
-def preprocess_pizzas(df: DataFrame) -> DataFrame:
+def _preprocess_pizzas(df: DataFrame) -> DataFrame:
     """Clean and preprocess pizzas DataFrame.
 
     - Drop duplicates
@@ -181,14 +181,14 @@ def load_and_preprocess(
         ]
     )
 
-    od_df = load_csv(spark, INPUT_DIR / "order_details.csv", order_details_schema)
-    orders_df = load_csv(spark, INPUT_DIR / "orders.csv", orders_schema)
-    pt_df = load_csv(spark, INPUT_DIR / "pizza_types.csv", pizza_types_schema)
-    pizzas_df = load_csv(spark, INPUT_DIR / "pizzas.csv", pizzas_schema)
+    od_df = _load_csv(spark, INPUT_DIR / "order_details.csv", order_details_schema)
+    orders_df = _load_csv(spark, INPUT_DIR / "orders.csv", orders_schema)
+    pt_df = _load_csv(spark, INPUT_DIR / "pizza_types.csv", pizza_types_schema)
+    pizzas_df = _load_csv(spark, INPUT_DIR / "pizzas.csv", pizzas_schema)
 
-    order_details_clean = preprocess_order_details(od_df)
-    orders_clean = preprocess_orders(orders_df)
-    pizza_types_clean = preprocess_pizza_types(pt_df)
-    pizzas_clean = preprocess_pizzas(pizzas_df)
+    order_details_clean = _preprocess_order_details(od_df)
+    orders_clean = _preprocess_orders(orders_df)
+    pizza_types_clean = _preprocess_pizza_types(pt_df)
+    pizzas_clean = _preprocess_pizzas(pizzas_df)
 
     return order_details_clean, orders_clean, pizza_types_clean, pizzas_clean
