@@ -5,8 +5,8 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import col, month, year
 
 from app.constants import OUTPUT_DIR
+from app.extract import extract_raw_data
 from app.integration import integrate_and_transform
-from app.load import load_raw_data
 from app.preprocessing import preprocess
 
 
@@ -30,7 +30,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO)
     spark = SparkSession.builder.appName("PizzaSalesETL").getOrCreate()
 
-    order_details_df, orders_df, pizza_types_df, pizzas_df = load_raw_data(spark)
+    order_details_df, orders_df, pizza_types_df, pizzas_df = extract_raw_data(spark)
     order_details_df.describe().show()
 
     order_details_df, orders_df, pizza_types_df, pizzas_df = preprocess(

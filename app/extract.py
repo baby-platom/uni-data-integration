@@ -22,7 +22,7 @@ def _load_csv(
     )
 
 
-def load_raw_data(
+def extract_raw_data(
     spark: SparkSession,
 ) -> tuple[DataFrame, DataFrame, DataFrame, DataFrame]:
     order_details_schema = StructType(
